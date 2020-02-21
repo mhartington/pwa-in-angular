@@ -1,0 +1,528 @@
+import { CodeSurfer } from "code-surfer"
+import oceanicNext  from "./theme"
+import {Appear, Notes, Image} from 'mdx-deck';
+import 'prismjs/components/prism-shell-session'
+import { Video, Spinner } from './components'
+export const theme = oceanicNext
+
+# Fast PWAs with Angular
+
+Mike Hartington | Ionic, Angular GDE
+
+[@mhartington](https://twitter.com/mhartington)
+
+---
+
+## Let's start with an Experiment
+
+---
+
+<Spinner />
+
+---
+
+## 14 Seconds
+
+Average load time on Mobile
+
+---
+
+## Average Experience
+
+- MBs of JS over the network
+- Slow load times
+- Lower user engagement
+
+---
+
+## How do PWAs relate to this?
+
+---
+
+PWAs provide an optimized experience <br/> that is faster and more resilient
+
+---
+
+> "Essentially, a responsive web site <br/> that's fast and works offline"
+
+- Mike Hartington
+
+---
+
+> "Marketing Words"
+
+- Mike Hartington
+
+---
+
+### Progressive Web Apps
+- Fast
+- Progressive
+- Secure
+- Integrated
+
+---
+
+Cool, so can I haz PWA with Angular?
+
+---
+
+Of Course!
+
+Just remember...
+
+---
+
+Make it Fast
+
+Make it Cache
+
+Make it Last
+
+---
+
+## Make it Fast
+
+---
+
+- Goal: Ship less code
+- Lazy Loading best practices
+- Choosing the right libraries
+
+
+---
+
+### Lazy Loading
+
+- Lazy load as much as possible!
+- Reduce initial load time
+- Pay for what you need
+
+---
+
+<CodeSurfer>
+
+```ts
+const routes: Routes = [
+  { path: '', component: LandingPage },
+  {
+    path: 'browse',
+    loadChildren: () =>
+      import('./pages/browse/browse.module').then(m => m.BrowsePageModule)
+  },
+  {
+    path: 'search',
+    loadChildren: () =>
+      import('./pages/search/search.module').then(m => m.SearchModule)
+  },
+  {
+    path: 'album/:id',
+    loadChildren: () =>
+      import('./pages/album/album.module').then(m => m.AlbumPageModule)
+  },
+  {
+    path: 'playlist/:id',
+    loadChildren: () =>
+      import('./pages/playlists/playlists.module').then(
+        m => m.PlaylistsPageModule
+      )
+  }
+];
+```
+
+```diff 2
+```
+
+```diff 3:7
+```
+
+</CodeSurfer>
+
+---
+
+<CodeSurfer>
+
+```ts
+const routes: Routes = [
+  {
+    path: '',
+    redirectTo: '/tutorial',
+    pathMatch: 'full'
+  },
+  {
+    path: 'app',
+    loadChildren: () =>
+      import('./pages/tabs-page/tabs-page.module')
+      .then(m => m.TabsModule)
+  },
+  {
+    path: 'tutorial',
+    canLoad: [CheckTutorial],
+    loadChildren: () =>
+      import('./pages/tutorial/tutorial.module')
+      .then(m => m.TutorialModule)
+  }
+];
+```
+
+```diff 2:6
+```
+
+```diff 13:19
+```
+
+```ts 1:19
+import { Injectable } from '@angular/core';
+import { CanLoad, Router } from '@angular/router';
+import { Storage } from '@ionic/storage';
+@Injectable({
+  providedIn: 'root'
+})
+export class CheckTutorial implements CanLoad {
+  constructor(private storage: Storage, private router: Router) {}
+
+  async canLoad() {
+    const res = await this.storage.get('did_tutorial');
+    if (res) {
+      this.router.navigate(['/app', 'tabs', 'schedule']);
+      return false;
+    } else {
+      return true;
+    }
+  }
+}
+```
+
+</CodeSurfer>
+
+---
+
+- Group common routes in one module
+- Preloading Strategy for loading times
+
+---
+
+### GuessJS
+- Analytics based preloading
+- Becomes part of your build
+- Takes the "guess" work out preloading
+
+---
+
+## The Right Libraries
+
+<Appear>
+
+`moment`
+
+335KB, Core + Locales
+
+`date-fns/esm (format)`
+
+9KB, ESModule
+
+</Appear>
+
+---
+
+## The Right Libraries
+
+<Appear>
+
+`lodash`
+
+70KB
+
+`lodash-es (without)`
+
+5KB
+
+</Appear>
+
+---
+
+### Fun fact...
+
+- This is how Ionic works
+- Each component ships as single ES-Module
+- Ionic will handling loading the rest
+
+---
+
+## The Right Libraries
+
+- source-map-explorer
+  - http://bit.ly/2vNgly4
+
+<br/>
+
+- Angular CLI Budgets
+  - http://bit.ly/2ATuiA5
+
+
+---
+
+## Make it Cache
+
+---
+
+## Service Worker
+- Proxy for the network
+- Intercepts out-going and incoming data
+- Caching and much more
+
+---
+
+<CodeSurfer>
+
+```js
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('service-worker.js')
+    .then(() => console.log('service worker installed'))
+    .catch(err => console.log('Error', err));
+}
+```
+
+```js
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    // then create our named cached
+    caches
+    .open('my-sw-cache')
+    .then(function(cache) {
+      // once created, lets add some local resources
+      return cache.addAll([
+        './build/main.js',
+        './build/main.css'
+      ]);
+    })
+    .then(function(){
+      console.log('Service worker is ready');
+    }));
+});
+```
+
+
+</CodeSurfer>
+
+---
+
+<Image src="twitter-sw.png" />
+
+---
+
+## Don't write your own SW
+- A lot of overhead
+- Can be complex
+- Best to use a library
+
+---
+
+```bash
+npm install @angular/service-worker
+```
+
+---
+
+- JSON driven approach
+- Precache, Lazy, External
+- Caching Strategy and age
+
+---
+
+<CodeSurfer>
+
+```json
+{
+  "index": "/index.html",
+  "assetGroups": [
+    {
+      "name": "app",
+      "installMode": "prefetch",
+      "resources": {
+        "files": ["/index.html", "/*.css", "/*.js"]
+      }
+    },
+  ],
+  "dataGroups": [...]
+}
+```
+
+```js
+import { ServiceWorkerModule } from '@angular/service-worker';
+
+@NgModule({
+  declarations: [AppComponent],
+  imports: [
+    ServiceWorkerModule.register('/ngsw-worker.js', {
+      enabled: environment.production
+    }),
+    BrowserModule,
+    // ....
+```
+
+</CodeSurfer>
+
+---
+
+- Check for updates with SwUpdate
+- Send Push Notifications with SwPush
+
+---
+
+# BUT WAIT, THERE'S MORE
+
+---
+
+```bash
+ng add @angular/pwa
+```
+
+---
+
+- Creates Service Worker
+- Auto-imports ServiceWorkerModule
+- Enabled for Prod builds
+
+---
+
+## Make it Last
+
+---
+
+## Manifest
+- JSON file for App assets
+- Icons, theme,  and name
+- Display mode for home screen
+
+---
+
+<CodeSurfer>
+
+```json
+{
+  "name": "Star Track",
+  "short_name": "StarTrack",
+  "theme_color": "#ffffff",
+  "background_color": "#ffffff",
+  "description": "The best Apple Music Client out there",
+  "display": "standalone",
+  "orientation": "portrait",
+  "start_url": "/browse",
+  "icons": [
+    ....
+    {
+      "src": "assets/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    ....
+  ]
+}
+```
+
+</CodeSurfer>
+
+---
+
+<CodeSurfer>
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+</head>
+```
+
+```html 1:8
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <link rel="manifest" href="manifest.json">
+</head>
+```
+
+</CodeSurfer>
+
+---
+
+<video src="manifest.mp4" style="height:80%"></video>
+
+---
+
+## Part of `@angular/pwa`
+- Adds manifest to project
+- Makes changes to index.html
+- Includes sample icons
+
+---
+
+Ok, so we follow best practices
+
+How does our app measure up?
+
+---
+
+<img style="width: 80%" src="web-page-test.png" />
+
+[webpagetest.org](https://webpagetest.org)
+
+<img style="width: 80%" src="lighthouse.png" />
+
+[Lighthouse in Chrome](https://developers.google.com/web/tools/lighthouse/)
+
+---
+
+## NOTE
+- These are consistently inconsistent :slightly_smiling_face:
+- Use as guides, not laws
+- _Google isn't perfect either..._
+
+---
+
+Anyways
+
+___
+
+# Bonus Material
+
+---
+
+- `@nguniversal/express-engine`
+  - SSR and Prerendering
+
+<br/>
+
+- `firebase-push-gen`
+  - H2 push headers for Firebase
+
+---
+
+## Take aways
+
+- Best practices exist for a reason
+- Speed before anything else
+- Automate and use tools to measure
+
+---
+
+>The Average web app <br/> loads in 14 seconds
+
+---
+
+
+## Thank you
+
+<br/>
+
+[@mhartington](https://twitter.com/mhartington)
+
+<br/>
+
+#### `</html>`
